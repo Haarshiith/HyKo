@@ -1,0 +1,1632 @@
+<!DOCTYPE html> 
+<html lang="de">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>PDF Konverter - Combined App</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,container-queries"></script>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#e72bbb",
+                        "excel": "#21a366",
+                        "background-light": "#fdf6f9", /* Subtle pink-blueish taint */
+                        "background-dark": "#11131e", /* Closer to original dark look */
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a1f2e",
+                        "surface-dark-alt": "#151c24",
+                        "surface-border-light": "#f0eff5",
+                        "surface-border-dark": "#2a3143"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+                        "mono": ["monospace"]
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                        'fade-out-up': 'fadeOutUp 0.5s ease-in forwards',
+                        'glow': 'glow 2s infinite alternate',
+                        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        fadeOutUp: {
+                            '0%': { opacity: '1', transform: 'translateY(0)' },
+                            '100%': { opacity: '0', transform: 'translateY(-30px)' },
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 10px rgba(236, 72, 153, 0.2), 0 0 20px rgba(236, 72, 153, 0.2)' },
+                            '100%': { boxShadow: '0 0 20px rgba(236, 72, 153, 0.6), 0 0 40px rgba(236, 72, 153, 0.4)' },
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 8px 30px rgba(0, 0, 0, 0.04)',
+                        'glow-active': '0 10px 40px -10px rgba(231, 43, 187, 0.5)',
+                        'glow': '0 0 25px rgba(219, 39, 119, 0.25)',
+                    }
+                }
+            }
+        };
+    </script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+
+        /* PDF Tool Styles */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .excel-grid {
+            background-image: linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .custom-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 100, 100, 0.2); border-radius: 10px; }
+
+        /* Custom Dual-Mode Range Slider (Settings) */
+        input[type='range'] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+        }
+        input[type='range']::-webkit-slider-runnable-track {
+            background: #e5e5ea;
+            height: 6px;
+            border-radius: 4px;
+        }
+        input[type='range']::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -7px;
+            background-color: #ffffff;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            border: 1px solid #d1d1d6;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .dark input[type='range']::-webkit-slider-runnable-track {
+            background: #2a3143;
+            height: 4px;
+            border-radius: 2px;
+        }
+        .dark input[type='range']::-webkit-slider-thumb {
+            margin-top: -6px;
+            background: linear-gradient(105deg, #3b82f6 0%, #e72bbb 35%);
+            height: 16px;
+            width: 16px;
+            border: 2px solid #11131e;
+            box-shadow: none;
+        }
+        
+        .custom-select-container select {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            background-image: none !important; 
+        }
+
+        /* Reusable Gradient Text Class (Settings) */
+        .text-gradient {
+            background: linear-gradient(105deg, #d946ef, #6366f1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent; 
+        }
+        .dark .text-gradient {
+            background: linear-gradient(105deg, #3b82f6 0%, #e72bbb 35%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent; 
+        }
+        
+        /* Reusable Gradient Background Class (Settings) */
+        .bg-gradient-primary {
+            background: linear-gradient(105deg, #d946ef, #8b5cf6);
+        }
+        .dark .bg-gradient-primary {
+            background: linear-gradient(105deg, #3b82f6 0%, #e72bbb 35%);
+        }
+
+        .log-transition {
+            transition-property: transform, opacity, box-shadow, filter;
+            transition-duration: 500ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform, opacity;
+        }
+
+        #terminalContainer {
+            isolation: isolate;
+            position: relative;
+            min-height: 320px;
+        }
+
+        .terminal-log {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+        }
+        
+        /* Logout Modal Bounce Animation */
+        .modal-bounce {
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex flex-col overflow-x-hidden selection:bg-fuchsia-200 dark:selection:bg-primary/30 transition-colors duration-300">
+    <input type="file" id="directoryInput" webkitdirectory directory class="hidden" />
+    <div id="auth-container" class="flex flex-col items-center justify-center min-h-screen p-4 w-full transition-all">
+        <main class="w-full max-w-md bg-surface-light dark:bg-surface-dark rounded-[24px] shadow-soft dark:shadow-none border border-surface-border-light dark:border-surface-border-dark p-8 md:p-10 relative overflow-hidden h-[520px] transition-colors duration-300">
+            
+            <div id="login-view" class="flex flex-col h-full justify-between w-full">
+                <div>
+                    <div class="text-center mb-8">
+                        <h1 id="login-title" class="text-[32px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-2">Willkommen</h1>
+                        <p id="login-subtitle" class="text-slate-500 dark:text-slate-400 text-sm font-medium">Bitte Daten eingeben.</p>
+                    </div>
+                    <form class="space-y-6 w-full">
+                        <div class="space-y-2">
+                            <label class="block text-[14px] font-semibold text-slate-800 dark:text-slate-200" for="email">Email</label>
+                            <input class="block w-full px-4 py-3 bg-slate-50 dark:bg-background-dark border border-slate-200 dark:border-surface-border-dark rounded-[16px] text-[15px] shadow-inner dark:shadow-none placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-fuchsia-400 dark:focus:border-primary focus:ring-2 dark:focus:ring-1 focus:ring-fuchsia-100 dark:focus:ring-primary transition-all text-slate-900 dark:text-slate-100" id="email" name="email" placeholder="you@example.com" type="email"/>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-[14px] font-semibold text-slate-800 dark:text-slate-200" for="password">Password</label>
+                            <input class="block w-full px-4 py-3 bg-slate-50 dark:bg-background-dark border border-slate-200 dark:border-surface-border-dark rounded-[16px] text-[15px] shadow-inner dark:shadow-none placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-fuchsia-400 dark:focus:border-primary focus:ring-2 dark:focus:ring-1 focus:ring-fuchsia-100 dark:focus:ring-primary transition-all text-slate-900 dark:text-slate-100" id="password" name="password" placeholder="••••••••" type="password"/>
+                        </div>
+                        <div class="pt-4 flex justify-center">
+                            <button id="login-btn" onclick="triggerLogin()" class="w-full max-w-[200px] flex items-center justify-center overflow-hidden rounded-full h-12 px-6 bg-gradient-to-r from-blue-500 to-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-all transform hover:scale-[1.02] active:scale-[0.98]" type="button">
+                                Überprüfen
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="mt-8 pt-6 border-t border-slate-100 dark:border-surface-border-dark flex justify-between items-center w-full text-sm text-slate-500 dark:text-slate-400 transition-colors">
+                    
+                    <div class="flex items-center gap-4">
+                        <a class="help-link hover:text-slate-900 dark:hover:text-slate-200 transition-colors font-medium" href="#">Hilfe</a>
+                        <label class="flex items-center gap-2 cursor-pointer" title="Toggle Light/Dark Mode">
+                            <span class="material-symbols-outlined text-[18px]">light_mode</span>
+                            <div class="relative">
+                                <input id="theme-toggle-login" class="sr-only peer" type="checkbox"/>
+                                <div class="w-10 h-[22px] bg-slate-200 dark:bg-background-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                            </div>
+                            <span class="material-symbols-outlined text-[18px]">dark_mode</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="welcome-view" class="hidden flex flex-col h-full justify-between w-full">
+                <div class="flex-1 flex flex-col items-center justify-center space-y-6 animate-fade-in-up mt-8">
+                    <div class="relative rounded-full animate-glow bg-white dark:bg-surface-dark p-1">
+                        <img alt="User Avatar" class="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-surface-border-dark shadow-sm relative z-10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4K7qzMnZV61gpRNPNfmJU5q_z-nJEEDpa_gGiTKQz5ZxzkEiuooXN36MmLkU3qrj4SzLLoMzEGFixPLCuw6CkNzV3Y026BZ3Yd-Ho552THMch7MxfuvvSGt2xOrgICqChWj2DI8DLV1pXLa1hkbf12DZqfMumW9zt0GJlb5adEEh0P2BKAcQF343hP6KNXX1vVyHztwnEdaIGMeO_UjX6AcXlk91FpUPh0IXiNKzFDpuYl5hjyLpTKiQfkYdMiC9J6ItcEHy4jW-y" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23ccc\' viewBox=\'0 0 24 24\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'"/>
+                    </div>
+                    <div class="text-center space-y-2">
+                        <h1 id="welcome-text" class="text-[24px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">Willkommen zurück,</h1>
+                        <p class="text-[32px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-primary">Admin!</p>
+                    </div>
+                    <div class="mt-8 flex justify-center items-center space-x-2">
+                        <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+                        <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                        <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0.4s;"></div>
+                    </div>
+                    <p id="loading-text" class="text-[13px] font-medium text-slate-500 dark:text-slate-400 mt-2">Dashboard wird vorbereitet...</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="pdf-app-container" class="hidden flex-col w-full min-h-screen opacity-0">
+        
+        <input type="file" id="fileInput" multiple accept=".pdf" class="hidden" />
+        <input type="file" id="excelInput" multiple accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden" />
+
+        <div id="page1" class="flex flex-col min-h-screen w-full">
+            <header class="flex items-center justify-between border-b border-surface-border-light dark:border-white/5 bg-surface-light/80 dark:bg-surface-dark-alt/80 backdrop-blur-md px-6 py-3 sticky top-0 z-50 transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center size-10 rounded-[12px] bg-primary text-white shadow-md shadow-primary/30 transition-colors">
+                        <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">description</span>
+                    </div>
+                    <h1 class="text-[18px] font-bold tracking-tight text-slate-900 dark:text-slate-100">PDF Konverter</h1>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button aria-label="Einstellungen" onclick="openSettings()" class="flex size-10 items-center justify-center rounded-[12px] hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-colors">
+                        <span class="material-symbols-outlined text-[24px]">settings</span>
+                    </button>
+                    <button aria-label="Hilfe" class="flex size-10 items-center justify-center rounded-[12px] hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-colors">
+                        <span class="material-symbols-outlined text-[24px]">help</span>
+                    </button>
+                    <button aria-label="Abmelden" onclick="openLogoutModal()" class="flex size-10 items-center justify-center rounded-[12px] hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-colors ml-1">
+                        <span class="material-symbols-outlined text-[24px]">logout</span>
+                    </button>
+                </div>
+            </header>
+            
+            <main class="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-7xl mx-auto">
+                <div class="w-full max-w-4xl flex flex-col gap-10 items-center">
+                    <div class="text-center space-y-3">
+                        <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">PDF OCR Tool</h2>
+                        <p class="text-[16px] text-slate-600 dark:text-slate-400 max-w-2xl mx-auto font-medium leading-relaxed">
+                            Konvertiere PDFs in bearbeitbare Tabellen. Einfach einfügen und in Echtzeit umwandeln.
+                        </p>
+                    </div>
+                    <div class="w-full relative group">
+                        <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500/40 to-primary/60 dark:from-primary/60 dark:to-purple-500/60 rounded-[26px] blur-lg opacity-75 group-hover:opacity-100 transition duration-500"></div>
+                        <div id="dropZone" class="relative w-full bg-surface-light dark:bg-surface-dark-alt rounded-[24px] border-2 border-dashed border-primary/20 dark:border-primary/40 min-h-[420px] flex flex-col items-center justify-center p-12 gap-6 transition-all duration-300 shadow-xl dark:shadow-none">
+                            <div class="size-20 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-2 ring-1 ring-primary/20 transition-colors">
+                                <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">cloud_upload</span>
+                            </div>
+                            <div class="text-center space-y-2">
+                                <p class="text-2xl font-semibold text-slate-900 dark:text-slate-100">PDFs hier ablegen</p>
+                                <p class="text-slate-500 dark:text-slate-400 text-[15px]">oder für Dateisuche klicken</p>
+                            </div>
+                            <div class="flex flex-col gap-5 items-center mt-4">
+                                <button id="uploadBtn" class="bg-gradient-to-r from-blue-500 to-primary text-white font-semibold py-3.5 px-10 rounded-full shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] flex items-center gap-2.5">
+                                    <span class="material-symbols-outlined text-[22px] font-bold">add_circle</span>
+                                    <span class="text-[15px]">Dateien laden</span>
+                                </button>
+                                <span class="text-[12px] text-slate-400 font-bold uppercase tracking-widest">Erlaubte Formate: PDF</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 w-full mt-8">
+                        <div class="flex flex-col items-center text-center space-y-4 group">
+                            <div class="size-14 rounded-full bg-primary/10 dark:bg-surface-dark/80 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300 border border-transparent dark:border-white/5 shadow-sm dark:shadow-none">
+                                <span class="material-symbols-outlined text-[24px]">bolt</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-[16px] text-slate-900 dark:text-slate-100 mb-2">Schnelle Verarbeitung</h3>
+                                <p class="text-[14px] text-slate-600 dark:text-slate-400 leading-relaxed">Automatische Verarbeitung mehrerer Dateien in Sekundenschnelle.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center text-center space-y-4 group">
+                            <div class="size-14 rounded-full bg-primary/10 dark:bg-surface-dark/80 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300 border border-transparent dark:border-white/5 shadow-sm dark:shadow-none">
+                                <span class="material-symbols-outlined text-[24px]">security</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-[16px] text-slate-900 dark:text-slate-100 mb-2">Sicher & Privat</h3>
+                                <p class="text-[14px] text-slate-600 dark:text-slate-400 leading-relaxed">Dateien werden nach <b>1h</b> automatisch vom Server gelöscht.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center text-center space-y-4 group">
+                            <div class="size-14 rounded-full bg-primary/10 dark:bg-surface-dark/80 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300 border border-transparent dark:border-white/5 shadow-sm dark:shadow-none">
+                                <span class="material-symbols-outlined text-[24px]">table_view</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-[16px] text-slate-900 dark:text-slate-100 mb-2">Exakte Tabellen</h3>
+                                <p class="text-[14px] text-slate-600 dark:text-slate-400 leading-relaxed">Perfekt abgestimmte Formatierungen und Tabellenstruktur.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <footer class="py-6 border-t border-surface-border-light dark:border-white/5 mt-auto bg-surface-light dark:bg-transparent">
+                <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400 opacity-80">
+                    <p>© 2026 PDF Converter Tool. Alle Rechte vorbehalten</p>
+                    <div class="flex gap-8">
+                        <a class="hover:text-primary transition-colors" href="#">Datenschutz</a>
+                        <a class="hover:text-primary transition-colors" href="#">Nutzungsbedingungen</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+        
+        <div id="page2" class="hidden flex-col min-h-screen w-full bg-background-light dark:bg-background-dark">
+            <header class="flex items-center justify-between border-b border-surface-border-light dark:border-white/5 px-6 md:px-10 py-3 bg-surface-light dark:bg-surface-dark-alt z-10 transition-colors">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center size-8 rounded-[8px] bg-primary text-white transition-colors">
+                        <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">description</span>
+                    </div>
+                    <h2 class="text-[18px] font-bold leading-tight">PDF Konverter</h2>
+                </div>
+                <div class="flex flex-1 justify-end gap-2 items-center">
+                    <button id="backBtn" class="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-[14px] font-semibold transition-colors mr-2">
+                        <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+                        <span>Zurück</span>
+                    </button>
+                    <button onclick="openSettings()" class="flex items-center justify-center size-10 rounded-[12px] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors" title="Einstellungen">
+                        <span class="material-symbols-outlined">settings</span>
+                    </button>
+                    <button class="flex items-center justify-center size-10 rounded-[12px] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors" title="Hilfe">
+                        <span class="material-symbols-outlined">help_outline</span>
+                    </button>
+                    <button onclick="openLogoutModal()" class="flex items-center justify-center size-10 rounded-[12px] text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400 transition-colors ml-1" title="Abmelden">
+                        <span class="material-symbols-outlined">logout</span>
+                    </button>
+                </div>
+            </header>
+
+            <main class="px-4 md:px-40 flex flex-1 justify-center py-10">
+                <div class="flex flex-col w-full max-w-[960px] flex-1 gap-8">
+                    <div class="flex flex-col gap-2 text-center md:text-left">
+                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Dateien prüfen</h1>
+                        <p class="text-slate-500 dark:text-slate-400 text-[16px] font-medium">Überprüfe die Dateien vor der Umwandlung</p>
+                    </div>
+                    
+                    <div class="flex flex-col rounded-[24px] border border-surface-border-light dark:border-white/5 bg-surface-light dark:bg-surface-dark-alt shadow-soft dark:shadow-none overflow-hidden transition-colors">
+                        <div class="flex items-center justify-between px-6 py-5 border-b border-surface-border-light dark:border-white/5 bg-slate-50/50 dark:bg-surface-dark-alt/50">
+                            <span id="fileCount" class="text-[12px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">0 Dateien geladen</span>
+                            <button id="deleteAllBtn" class="text-[13px] font-bold text-red-500 hover:text-red-600 transition-colors bg-red-50 dark:bg-red-500/10 px-3 py-1.5 rounded-lg">Alle löschen</button>
+                        </div>
+                        <div id="fileList" class="flex flex-col divide-y divide-surface-border-light dark:divide-white/5"></div>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row items-center justify-end gap-4 mt-2">
+                        <button id="addExcelBtn" class="w-full sm:w-auto flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-6 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[15px] font-semibold border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors">
+                            <span class="material-symbols-outlined mr-2 text-[20px]">table_view</span>
+                            <span class="truncate">Excel anhängen (optional)</span>
+                        </button>
+                        <button id="addMoreBtn" class="w-full sm:w-auto flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-6 bg-white dark:bg-surface-dark border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-[15px] font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm dark:shadow-none">
+                            <span class="material-symbols-outlined mr-2 text-[20px]">add</span>
+                            <span class="truncate">Mehr hinzufügen</span>
+                        </button>
+                        <button id="startProcessBtn" class="w-full sm:w-auto flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-8 bg-gradient-to-r from-blue-500 to-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                            <span class="truncate">Prozess starten</span>
+                            <span class="material-symbols-outlined ml-2 text-[20px]">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div id="page3" class="hidden flex-col min-h-screen w-full bg-background-light dark:bg-background-dark relative">
+            <header class="flex items-center justify-between border-b border-surface-border-light dark:border-white/5 px-6 md:px-10 py-3 bg-surface-light dark:bg-surface-dark-alt z-20 relative transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center size-8 rounded-[8px] bg-primary/10 text-primary transition-colors">
+                        <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">hub</span>
+                    </div>
+                    <h2 class="text-slate-900 dark:text-slate-100 text-[18px] font-bold leading-tight">Status Center</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="flex items-center justify-center rounded-lg h-10 px-6 bg-gradient-to-r from-blue-500 to-primary text-white text-sm font-bold hover:opacity-90 transition-colors">
+                        Weitere Hyko Projekte
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-grow flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden z-10">
+                <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px] pointer-events-none -z-10"></div>
+                <div class="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[128px] pointer-events-none -z-10"></div>
+                
+                <div class="flex flex-col max-w-[800px] w-full gap-8 z-10">
+                    <div class="text-center space-y-4">
+                        <h1 class="text-slate-900 dark:text-slate-100 text-4xl md:text-5xl font-extrabold tracking-tight">
+                            Datei wird konvertiert...
+                        </h1>
+                        <p class="text-slate-500 dark:text-slate-400 text-[16px] font-medium max-w-lg mx-auto">
+                            Wir verarbeiten nun die Dateien <br/>
+                            <span id="processingFileNames" class="text-slate-800 dark:text-slate-200 font-bold">...</span> <br/>
+                            in eine Excel-Tabelle.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-center py-4">
+                        <div class="flex flex-col gap-3 w-full max-w-lg mx-auto">
+                            <div class="flex justify-between items-end">
+                                <p class="text-slate-700 dark:text-slate-200 text-[14px] font-semibold flex items-center gap-2">
+                                    <span class="relative flex h-3 w-3">
+                                        <span id="progressPing" class="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping-slow"></span>
+                                        <span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                                    </span>
+                                    <span id="currentProcessingText">Verarbeite Dateien...</span>
+                                </p>
+                                <p id="progressText" class="text-primary font-bold text-[14px]">0%</p>
+                            </div>
+                            <div class="rounded-full bg-slate-200 dark:bg-surface-border-dark h-2.5 overflow-hidden shadow-inner dark:shadow-none">
+                                <div id="progressBar" class="h-full rounded-full bg-gradient-to-r from-blue-500 to-primary transition-all duration-500" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 relative w-full max-w-2xl mx-auto">
+                        <div id="terminalContainer" class="relative perspective-[1000px] min-h-[260px] pb-10">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center mt-2 z-20">
+                        <button id="cancelProcessBtn" class="px-8 py-3 rounded-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark text-slate-600 dark:text-slate-300 hover:text-red-600 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-500/10 dark:hover:border-red-500/30 dark:hover:text-red-400 transition-all duration-300 font-semibold text-[14px] shadow-sm dark:shadow-none group">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">close</span>
+                                Vorgang abbrechen
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div id="page4" class="hidden flex-col min-h-screen w-full bg-background-light dark:bg-background-dark relative">
+            <header class="flex items-center justify-between border-b border-surface-border-light dark:border-white/5 px-6 md:px-10 py-3 bg-surface-light dark:bg-surface-dark-alt z-10 transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center size-8 rounded-[8px] bg-primary text-white transition-colors">
+                        <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">description</span>
+                    </div>
+                    <h2 class="text-slate-900 dark:text-slate-100 text-[18px] font-bold leading-tight">PDF Konverter Pro</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="flex items-center justify-center rounded-lg h-10 px-6 bg-gradient-to-r from-blue-500 to-primary text-white text-sm font-bold hover:opacity-90 transition-colors">
+                        Weitere Hyko Projekte
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
+                <div class="w-full max-w-[960px] flex flex-col gap-8">
+                    
+                    <div class="flex flex-col items-center text-center gap-4">
+                        <div class="flex items-center justify-center size-20 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 mb-2 ring-1 ring-emerald-100 dark:ring-emerald-500/20">
+                            <span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                                Prozess <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-400">Vollendet</span>
+                            </h1>
+                            <p class="text-slate-500 dark:text-slate-400 text-[16px] font-medium">Deine Dateien wurden erfolgreich ins Excel-Format umgewandelt.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface-light dark:bg-surface-dark-alt rounded-[24px] border border-surface-border-light dark:border-white/5 shadow-soft dark:shadow-none overflow-hidden flex flex-col md:flex-row min-h-[480px] transition-colors">
+                        <div class="w-full md:w-1/2 bg-slate-50 dark:bg-surface-dark p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-surface-border-light dark:border-white/5 transition-colors group relative cursor-pointer">
+                            <div class="relative w-full aspect-[4/3] max-w-sm rounded-[16px] bg-white dark:bg-surface-dark-alt overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm transition-all duration-300 group-hover:blur-sm group-hover:opacity-40">
+                                <div class="absolute inset-0 excel-grid opacity-30 dark:opacity-10"></div>
+                                <div class="relative w-full h-full p-6">
+                                    <div class="flex items-center gap-3 mb-6 text-left">
+                                        <div class="size-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                                            <span class="material-symbols-outlined text-[24px]">table_view</span>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <div class="w-24 h-2.5 bg-slate-200 dark:bg-surface-border-dark rounded-full"></div>
+                                            <div class="w-16 h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded-full"></div>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-2">
+                                        <div class="h-3 bg-slate-200 dark:bg-surface-border-dark rounded"></div><div class="h-3 bg-slate-200 dark:bg-surface-border-dark rounded"></div><div class="h-3 bg-slate-200 dark:bg-surface-border-dark rounded"></div><div class="h-3 bg-slate-200 dark:bg-surface-border-dark rounded"></div>
+                                        <div class="col-span-4 border-t border-slate-100 dark:border-surface-border-dark my-2"></div>
+                                        <div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div>
+                                        <div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div>
+                                        <div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div><div class="h-2 bg-slate-100 dark:bg-surface-border-dark/50 rounded"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                <span class="material-symbols-outlined text-slate-800 dark:text-white text-5xl drop-shadow-md">visibility</span>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-between gap-6">
+                            <div class="space-y-6">
+                                <h3 class="text-[16px] font-bold text-slate-900 dark:text-slate-100">Datei-Details</h3>
+                                <div class="space-y-3">
+                                    <div class="p-4 rounded-[16px] bg-slate-50 dark:bg-surface-dark border border-slate-200 dark:border-white/5 flex items-center gap-4 transition-colors">
+                                        <div class="size-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">description</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Dateiname</p>
+                                            <input id="finalFileName" class="bg-transparent border-none p-0 text-[15px] font-semibold text-slate-900 dark:text-slate-100 w-full focus:ring-0 focus:outline-none" type="text" value="konvertierte_datei"/>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="p-4 rounded-[16px] bg-slate-50 dark:bg-surface-dark border border-slate-200 dark:border-white/5 flex items-center gap-3 transition-colors">
+                                            <div class="size-8 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined text-[18px]">data_usage</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Größe</p>
+                                                <p id="finalFileSize" class="text-[14px] font-semibold text-slate-900 dark:text-slate-100">0 MB</p>
+                                            </div>
+                                        </div>
+                                        <div class="p-4 rounded-[16px] bg-slate-50 dark:bg-surface-dark border border-slate-200 dark:border-white/5 flex items-center gap-3 transition-colors">
+                                            <div class="size-8 rounded-full bg-purple-50 dark:bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined text-[18px]">format_list_numbered</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Zeilen</p>
+                                                <p class="text-[14px] font-semibold text-slate-900 dark:text-slate-100">1.420</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-3">
+                                <div class="flex overflow-hidden rounded-[16px] shadow-sm">
+                                    <button class="flex-[3] flex items-center justify-center gap-2 h-14 bg-gradient-to-r from-blue-500 to-primary hover:opacity-90 text-white font-semibold transition-all active:scale-[0.98]">
+                                        <span class="material-symbols-outlined text-[20px]">download</span>
+                                        <span class="text-[15px]">Exportieren</span>
+                                    </button>
+                                    <div class="w-px bg-white/20"></div>
+                                    <div class="flex-1 relative bg-gradient-to-r from-primary to-primary">
+                                        <select class="custom-select w-full h-14 bg-transparent text-white font-semibold text-[15px] px-4 text-center cursor-pointer border-none focus:ring-0">
+                                            <option class="text-slate-900" value=".xlsx">.xlsx</option>
+                                            <option class="text-slate-900" value=".csv">.csv</option>
+                                        </select>
+                                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">
+                                            <span class="material-symbols-outlined text-white text-[20px]">expand_more</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="w-full flex items-center justify-center gap-2 h-12 bg-white dark:bg-surface-dark border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 font-semibold rounded-[16px] hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                    <span class="material-symbols-outlined text-[20px]">visibility</span>
+                                    <span class="text-[14px]">Vorschau ansehen</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center mt-4">
+                        <button id="startOverBtn" class="group px-8 py-3 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 text-[15px] font-semibold transition-all flex items-center gap-2 hover:bg-white dark:hover:bg-surface-dark-alt hover:shadow-sm">
+                            <span class="material-symbols-outlined text-[20px] transition-transform group-hover:-translate-x-1">arrow_back</span>
+                            Neue Datei umwandeln
+                        </button>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="fixed inset-0 z-[9998] hidden opacity-0 transition-opacity duration-500 bg-background-light dark:bg-background-dark overflow-hidden">
+        <div class="relative flex h-full min-h-screen w-full flex-col group/design-root">
+            <div class="layout-container flex h-full grow flex-col">
+                <div class="px-4 lg:px-8 flex flex-1 justify-center py-8 h-full overflow-hidden relative">
+                    
+                    <button onclick="closeSettings()" class="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors font-semibold z-10 px-4 py-2 bg-surface-light dark:bg-surface-dark rounded-full shadow-sm border border-surface-border-light dark:border-white/5">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                        Zurück zur App
+                    </button>
+
+                    <div class="layout-content-container flex flex-row max-w-[1400px] w-full flex-1 gap-8 h-full mt-12">
+                        
+                        <div class="w-72 flex flex-col justify-between bg-surface-light dark:bg-surface-dark p-5 rounded-[24px] shadow-soft dark:shadow-none border border-surface-border-light dark:border-white/5 flex-shrink-0 transition-colors duration-300">
+                            <div class="flex flex-col gap-8">
+                                <div class="flex gap-4 items-center px-2 pt-2">
+                                    <div class="bg-fuchsia-50 dark:bg-primary/20 flex items-center justify-center rounded-[14px] size-12 shadow-sm dark:shadow-none text-primary transition-colors">
+                                        <span class="material-symbols-outlined text-2xl text-gradient dark:text-gradient">settings</span>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <h1 class="text-slate-900 dark:text-slate-100 text-lg font-bold tracking-tight">Einstellungen</h1>
+                                        <p class="text-slate-500 dark:text-slate-400 text-xs font-medium">PDF-zu-Excel Werkzeug</p>
+                                    </div>
+                                </div>
+                                <nav class="flex flex-col gap-2">
+                                    <a id="btn-ui" onclick="switchTab('section-ui', this)" class="nav-link flex items-center gap-3 px-4 py-3 rounded-[14px] bg-fuchsia-50/50 dark:bg-primary/10 text-fuchsia-600 dark:text-primary border-fuchsia-100/50 shadow-sm border-fuchsia-100/50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-all cursor-pointer border border-transparent">
+                                        <span class="material-symbols-outlined text-[22px] text-gradient"
+                                        style="font-variation-settings: 'FILL' 1;">palette</span>
+                                        <span class="text-[15px] font-medium">Benutzeroberfläche</span>
+                                    </a>
+                                    
+                                    <a id="btn-storage" onclick="switchTab('section-storage', this)" class="nav-link flex items-center gap-3 px-4 py-3 rounded-[14px] hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-all cursor-pointer border border-transparent">
+                                        <span class="material-symbols-outlined text-[22px]">hard_drive_2</span>
+                                        <span class="text-[15px] font-medium">Speicherort</span>
+                                    </a>
+                                    
+                                    <a id="btn-account" onclick="switchTab('section-account', this)" class="nav-link flex items-center gap-3 px-4 py-3 rounded-[14px] hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-all cursor-pointer border border-transparent">
+                                        <span class="material-symbols-outlined text-[22px]">person</span>
+                                        <span class="text-[15px] font-medium">Account</span>
+                                    </a>
+                                    
+                                    <div class="h-px bg-slate-100 dark:bg-white/5 my-2 mx-4 transition-colors"></div>
+                                    
+                                    <a id="btn-performance" onclick="switchTab('section-performance', this)" class="nav-link flex items-center gap-3 px-4 py-3 rounded-[14px] hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-all cursor-pointer border border-transparent">
+                                        <span class="material-symbols-outlined text-[22px]">speed</span>
+                                        <span class="text-[15px] font-medium">Performance</span>
+                                    </a>
+                                    
+                                    <a id="btn-expert" onclick="switchTab('section-expert', this)" class="nav-link flex items-center gap-3 px-4 py-3 rounded-[14px] dark:border-transparent dark:shadow-none cursor-pointer transition-all">
+                                        <span class="material-symbols-outlined text-[22px] text-gradient" style="font-variation-settings: 'FILL' 1;">build</span>
+                                        <span class="text-[15px] font-semibold text-gradient">Feinadjustierung</span>
+                                    </a>
+                                </nav>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 flex flex-col bg-surface-light dark:bg-surface-dark-alt rounded-[24px] shadow-soft dark:shadow-none border border-surface-border-light dark:border-white/5 p-10 overflow-y-auto transition-colors duration-300">
+                            
+                            <div id="section-expert" class="settings-section hidden">
+                                <section class="mb-12">
+                                    <h2 class="text-slate-900 dark:text-slate-100 text-[32px] font-extrabold dark:font-bold tracking-tight mb-8">Feinadjustierung <span class="text-slate-400 dark:text-slate-500 font-medium text-2xl ml-2">(Experten)</span></h2>
+                                    <div class="flex flex-col gap-8">
+                                        <div class="flex flex-col gap-4 max-w-[640px]">
+                                            <label class="flex flex-col w-full">
+                                                <p class="text-slate-800 dark:text-slate-200 text-[15px] font-semibold mb-3">Kontext hinzufügen</p>
+                                                <textarea class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-[16px] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 dark:focus:ring-1 dark:focus:ring-primary border border-slate-200 dark:border-white/5 bg-background-light/50 dark:bg-background-dark focus:border-fuchsia-400 dark:focus:border-primary min-h-36 placeholder:text-slate-400 dark:placeholder:text-slate-500 p-4 text-[15px] transition-shadow shadow-inner dark:shadow-none" placeholder="Geben Sie hier zusätzlichen Kontext ein..."></textarea>
+                                            </label>
+                                            <div class="flex justify-start gap-3 mt-2">
+                                                <button class="flex items-center justify-center overflow-hidden rounded-full h-11 px-6 bg-gradient-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                                                    <span class="material-symbols-outlined mr-2 text-[20px]">add</span>
+                                                    <span class="truncate">Kontext hinzufügen</span>
+                                                </button>
+                                                <button class="flex items-center justify-center overflow-hidden rounded-full h-11 px-6 bg-slate-100 dark:bg-surface-dark text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/5 text-[15px] font-semibold transition-colors border border-transparent dark:border-white/5">
+                                                    <span class="material-symbols-outlined mr-2 text-[20px]">chat</span>
+                                                    <span class="truncate">Nachrichten ansehen</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="max-w-[640px] bg-slate-50 dark:bg-background-dark/50 p-6 rounded-[20px] border border-slate-100 dark:border-white/5 transition-colors">
+                                            <div class="flex flex-col gap-3">
+                                                <div class="flex items-center justify-between">
+                                                    <p class="text-slate-800 dark:text-slate-200 text-[15px] font-semibold">Temperatur</p>
+                                                    <div class="flex items-center gap-4 flex-1 mx-6">
+                                                        <input class="w-full" max="1" min="0" step="0.05" type="range" value="0.7"/>
+                                                    </div>
+                                                    <p class="text-fuchsia-600 dark:text-primary text-[15px] font-bold w-8 text-right bg-fuchsia-50 dark:bg-primary/10 px-2 py-1 rounded-lg transition-colors">0.7</p>
+                                                </div>
+                                                <p class="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed">Höhere Werte (z.B. 0.8) machen die Ausgabe zufälliger, niedrigere Werte (z.B. 0.2) fokussierter und deterministischer.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center justify-between max-w-[640px] p-5 rounded-[20px] border border-slate-100 dark:border-white/5 bg-white dark:bg-background-dark/50 shadow-sm dark:shadow-none mt-2 transition-colors">
+                                            <div>
+                                                <p class="text-slate-800 dark:text-slate-200 text-[15px] font-semibold">Regeln verwalten</p>
+                                                <p class="text-[13px] text-slate-500 dark:text-slate-400 mt-1">Spezifische Extraktions- und Formatierungsregeln.</p>
+                                            </div>
+                                            <button class="flex items-center justify-center rounded-full h-10 px-5 bg-slate-100 dark:bg-surface-dark text-slate-700 dark:text-slate-200 text-[14px] font-semibold hover:bg-slate-200 dark:hover:bg-white/5 transition-colors border border-transparent dark:border-white/5">
+                                                <span class="material-symbols-outlined mr-2 text-[18px]">rule</span>
+                                                <span class="truncate">Öffnen</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="flex py-10 max-w-[640px] border-t border-slate-100 dark:border-white/5 mt-10 transition-colors">
+                                        <button class="save-generic-btn rounded-full h-12 px-8 bg-slate-900 dark:bg-gradient-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-colors">
+                                            Einstellungen speichern
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <div id="section-ui" class="settings-section block">
+                                 <section class="mb-12">
+                                    <h2 class="text-slate-900 dark:text-slate-100 text-[32px] font-extrabold dark:font-bold tracking-tight mb-2">Benutzeroberfläche</h2>
+                                    <p class="text-slate-600 dark:text-slate-400 text-base mb-8">Verwalte deine Benutzeroberfläche</p>
+                                    
+                                    <div class="flex flex-col gap-4 max-w-[640px] mb-8">
+                                        <p class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold pb-2 border-b border-slate-100 dark:border-white/5">Darstellung</p>
+                                        
+                                        <label class="flex items-center justify-between cursor-pointer pt-2">
+                                            <div class="flex items-center gap-4">
+                                                <div class="text-fuchsia-600 dark:text-primary flex items-center justify-center rounded-[14px] bg-fuchsia-50 dark:bg-primary/10 shrink-0 size-12 shadow-sm dark:shadow-none transition-colors">
+                                                    <span class="material-symbols-outlined">light_mode</span>
+                                                </div>
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold">Dark Mode aktivieren</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Zwischen hellem und dunklem Design wechseln</span>
+                                                </div>
+                                            </div>
+                                            <div class="relative">
+                                                <input id="theme-toggle-settings" class="sr-only peer" type="checkbox"/>
+                                                <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex flex-col gap-4 max-w-[640px] mb-8">
+                                        <p class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold pb-2 border-b border-slate-100 dark:border-white/5">Templates</p>
+                                        
+                                        <label class="flex items-center justify-between cursor-pointer pt-2">
+                                            <div class="flex items-center gap-4">
+                                                <div class="text-slate-600 dark:text-slate-300 flex items-center justify-center rounded-[14px] bg-slate-50 dark:bg-background-dark/50 border border-transparent dark:border-white/5 shrink-0 size-12 transition-colors">
+                                                    <span class="material-symbols-outlined">dashboard</span>
+                                                </div>
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold">Template Text 1</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Standard-Extraktionsformat aktivieren</span>
+                                                </div>
+                                            </div>
+                                            <div class="relative">
+                                                <input checked class="sr-only peer" type="checkbox"/>
+                                                <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                            </div>
+                                        </label>
+
+                                        <label class="flex items-center justify-between cursor-pointer">
+                                            <div class="flex items-center gap-4">
+                                                <div class="text-slate-600 dark:text-slate-300 flex items-center justify-center rounded-[14px] bg-slate-50 dark:bg-background-dark/50 border border-transparent dark:border-white/5 shrink-0 size-12 transition-colors">
+                                                    <span class="material-symbols-outlined">table</span>
+                                                </div>
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold">Template Text 2</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Rohdatentabellen einschließen</span>
+                                                </div>
+                                            </div>
+                                            <div class="relative">
+                                                <input class="sr-only peer" type="checkbox"/>
+                                                <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex flex-col gap-4 max-w-[640px]">
+                                        <p class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold pb-2 border-b border-slate-100 dark:border-white/5">Erweiterte Einstellungen</p>
+                                        
+                                        <div class="flex flex-col gap-2 pt-2 bg-slate-50 dark:bg-background-dark/50 p-6 rounded-[20px] border border-slate-100 dark:border-white/5 transition-colors">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-slate-800 dark:text-slate-200 text-[15px] font-semibold">Sensitivity Level</p>
+                                                <div class="flex items-center gap-4 flex-1 mx-6">
+                                                    <input class="w-full" max="10" min="1" step="1" type="range" value="7"/>
+                                                </div>
+                                                <p class="text-fuchsia-600 dark:text-primary text-[15px] font-bold w-8 text-right bg-fuchsia-50 dark:bg-primary/10 px-2 py-1 rounded-lg transition-colors">7</p>
+                                            </div>
+                                            <div class="flex justify-between text-[12px] text-slate-400 dark:text-slate-500 px-1 font-medium mt-1">
+                                                <span>1 (Niedrig)</span>
+                                                <span>10 (Hoch)</span>
+                                            </div>
+                                            <p class="text-[13px] text-slate-500 dark:text-slate-400 mt-2">Empfindlichkeit der Texterkennung anpassen (1-10)</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-10 flex justify-start max-w-[800px] border-t border-slate-100 dark:border-white/5 pt-10 transition-colors">
+                                        <button class="save-generic-btn rounded-full h-12 px-8 bg-slate-900 dark:bg-gradient-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-colors">
+                                            Einstellungen speichern
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <div id="section-account" class="settings-section hidden">
+                                <section class="mb-12">
+                                    <h2 class="text-slate-900 dark:text-slate-100 text-[32px] font-extrabold dark:font-bold tracking-tight mb-8">Account</h2>
+                                    <div class="flex flex-col @container mb-10">
+                                        <div class="flex w-full flex-col gap-6 @[520px]:flex-row @[520px]:items-center bg-white dark:bg-background-dark/50 p-8 rounded-[24px] border border-slate-100 dark:border-white/5 shadow-soft dark:shadow-none transition-all">
+                                            <div class="flex items-center gap-6">
+                                                <div id="user-avatar-settings" class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-[100px] w-[100px] ring-4 ring-white dark:ring-0 dark:border-2 dark:border-primary/30 shadow-glow dark:shadow-md transition-all duration-300" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA4K7qzMnZV61gpRNPNfmJU5q_z-nJEEDpa_gGiTKQz5ZxzkEiuooXN36MmLkU3qrj4SzLLoMzEGFixPLCuw6CkNzV3Y026BZ3Yd-Ho552THMch7MxfuvvSGt2xOrgICqChWj2DI8DLV1pXLa1hkbf12DZqfMumW9zt0GJlb5adEEh0P2BKAcQF343hP6KNXX1vVyHztwnEdaIGMeO_UjX6AcXlk91FpUPh0IXiNKzFDpuYl5hjyLpTKiQfkYdMiC9J6ItcEHy4jW-y');"></div>
+                                                <div class="flex flex-col justify-center">
+                                                    <p class="text-slate-500 dark:text-slate-400 text-[13px] font-medium uppercase tracking-wider mb-1">Willkommen zurück,</p>
+                                                    <p id="display-name" class="text-gradient text-[28px] font-bold leading-tight">Sarah Jenkins!</p>
+                                                    <p id="display-email" class="text-slate-500 dark:text-slate-400 text-[14px] font-medium mt-1">sarah.j@example.com</p>
+                                                </div>
+                                            </div>
+                                            <div class="@[520px]:ml-auto flex gap-3">
+                                                <button onclick="openLogoutModal()" class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-full h-11 px-6 bg-slate-100 dark:bg-surface-dark border border-transparent dark:border-white/5 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 text-slate-700 dark:text-slate-200 text-[14px] font-semibold transition-colors">
+                                                    <span>Abmelden</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[800px]">
+                                        <label class="flex flex-col">
+                                            <span class="text-slate-800 dark:text-slate-200 text-[14px] font-semibold mb-2">Benutzername</span>
+                                            <input id="input-name" class="form-input flex w-full rounded-[16px] text-slate-900 dark:text-slate-100 bg-background-light/50 dark:bg-background-dark border border-slate-200 dark:border-white/5 focus:border-fuchsia-400 dark:focus:border-primary focus:ring-2 dark:focus:ring-1 focus:ring-fuchsia-100 dark:focus:ring-primary h-12 px-4 text-[15px] transition-all shadow-inner dark:shadow-none" type="text" value="Sarah Jenkins"/>
+                                        </label>
+                                        <label class="flex flex-col">
+                                            <span class="text-slate-800 dark:text-slate-200 text-[14px] font-semibold mb-2">E-Mail Adresse</span>
+                                            <input id="input-email" class="form-input flex w-full rounded-[16px] text-slate-900 dark:text-slate-100 bg-background-light/50 dark:bg-background-dark border border-slate-200 dark:border-white/5 focus:border-fuchsia-400 dark:focus:border-primary focus:ring-2 dark:focus:ring-1 focus:ring-fuchsia-100 dark:focus:ring-primary h-12 px-4 text-[15px] transition-all shadow-inner dark:shadow-none" type="email" value="sarah.j@example.com"/>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex flex-col gap-5 max-w-[800px] mt-10 p-6 bg-slate-50 dark:bg-background-dark/50 rounded-[20px] border border-slate-100 dark:border-white/5 transition-colors">
+                                        <p class="text-slate-800 dark:text-slate-200 text-[15px] font-semibold">Erweiterte Profileinstellungen</p>
+                                        <label class="flex items-center justify-between cursor-pointer">
+                                            <div class="flex items-center gap-4">
+                                                <div class="text-fuchsia-600 dark:text-primary flex items-center justify-center rounded-full bg-white dark:bg-surface-dark shadow-sm dark:shadow-none border border-transparent dark:border-white/5 shrink-0 size-12 transition-colors">
+                                                    <span class="material-symbols-outlined">face</span>
+                                                </div>
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[14px] font-semibold">Avatar Geschlecht</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Wechseln Sie zwischen weiblichem und männlichem Avatar</span>
+                                                </div>
+                                            </div>
+                                            <div class="relative">
+                                                <input id="avatar-toggle" class="sr-only peer" type="checkbox" checked />
+                                                <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="mt-10 flex justify-start max-w-[800px]">
+                                        <button id="save-btn" class="save-generic-btn rounded-full h-12 px-8 bg-slate-900 dark:bg-gradient-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-colors">
+                                            Einstellungen speichern
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <div id="section-storage" class="settings-section hidden">
+                                 <section class="mb-12">
+                                    <h2 class="text-slate-900 dark:text-slate-100 text-[32px] font-extrabold dark:font-bold tracking-tight mb-2">Speicherort</h2>
+                                    <p class="text-slate-600 dark:text-slate-400 text-[15px] mb-8">Wähle das Standard-Ausgabeverzeichnis für deine konvertierten Excel-Dateien.</p>
+                                    
+                                    <div class="flex flex-col gap-4 max-w-[800px]">
+                                        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center mt-2">
+                                            <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-6 bg-gradient-primary transition-colors text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90">
+                                                <span class="material-symbols-outlined mr-2 text-[20px]">drive_folder_upload</span>
+                                                <span class="truncate">Speicherort auswählen</span>
+                                            </button>
+                                            <div class="flex-1 w-full bg-slate-50 dark:bg-background-dark/50 rounded-[16px] p-4 border border-slate-200 dark:border-white/5 flex items-center gap-3 transition-colors">
+                                                <span class="material-symbols-outlined text-slate-500 dark:text-slate-400 text-[20px]">computer</span>
+                                                <p class="text-slate-800 dark:text-slate-200 text-[14px] font-mono break-all">C:\Users\Default\Documents\Output</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-col gap-8 mt-10 max-w-[800px]">
+                                        <div class="flex flex-col gap-3 max-w-[640px]">
+                                            <label class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold">Bevorzugtes Konvertierungs-Modell</label>
+                                            <div class="relative custom-select-container">
+                                                <select class="bg-none flex w-full min-w-0 flex-1 rounded-[16px] text-slate-900 dark:text-slate-100 focus:outline-none border border-slate-200 dark:border-white/5 bg-background-light/50 dark:bg-background-dark focus:border-fuchsia-400 dark:focus:border-primary focus:ring-2 dark:focus:ring-1 focus:ring-fuchsia-200 dark:focus:ring-primary shadow-inner dark:shadow-none p-4 pr-12 text-[15px] transition-all cursor-pointer">
+                                                    <option value="1">Option 1 (Lokal, schnell)</option>
+                                                    <option selected value="2">Option 2 (Cloud, hohe Genauigkeit)</option>
+                                                </select>
+                                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 dark:text-slate-400">
+                                                    <span class="material-symbols-outlined text-[24px]">expand_more</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex flex-col gap-5 max-w-[640px] bg-slate-50 dark:bg-background-dark/50 p-6 rounded-[20px] border border-slate-100 dark:border-white/5 transition-colors">
+                                            <p class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold pb-1">Zusätzliche Speicheroptionen</p>
+                                            
+                                            <label class="flex items-center justify-between cursor-pointer">
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[14px] font-semibold">Original-PDF in Ausgabeordner kopieren</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Speichert das ursprüngliche PDF neben der erstellten Excel-Datei.</span>
+                                                </div>
+                                                <div class="relative">
+                                                    <input checked class="sr-only peer" type="checkbox"/>
+                                                    <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                                </div>
+                                            </label>
+                                            
+                                            <label class="flex items-center justify-between cursor-pointer mt-2">
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[14px] font-semibold">Unterordner nach Datum erstellen</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Sortiert die Exporte automatisch in Ordner wie /2026-03-04/.</span>
+                                                </div>
+                                                <div class="relative">
+                                                    <input class="sr-only peer" type="checkbox"/>
+                                                    <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-12 flex justify-start max-w-[800px] border-t border-slate-100 dark:border-white/5 pt-10 transition-colors">
+                                        <button class="save-generic-btn rounded-full h-12 px-8 bg-slate-900 dark:bg-gradient-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-colors">
+                                            Einstellungen speichern
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <div id="section-performance" class="settings-section hidden">
+                                 <section class="mb-12">
+                                    <h2 class="text-slate-900 dark:text-slate-100 text-[32px] font-extrabold dark:font-bold tracking-tight mb-8">Performance</h2>
+                                    
+                                    <div class="flex flex-col gap-6 max-w-[640px]">
+                                        <div class="flex flex-col gap-3">
+                                            <label class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold">KI Modell</label>
+                                            <div class="relative custom-select-container">
+                                                <select class="bg-none flex w-full min-w-0 flex-1 rounded-[16px] text-slate-900 dark:text-slate-100 focus:outline-none border border-slate-200 dark:border-white/5 bg-background-light/50 dark:bg-background-dark focus:border-fuchsia-400 dark:focus:border-primary focus:ring-2 dark:focus:ring-1 focus:ring-fuchsia-200 dark:focus:ring-primary shadow-inner dark:shadow-none p-4 pr-12 text-[15px] transition-all cursor-pointer">
+                                                    <option value="1">Option 1 (Schneller, weniger genau)</option>
+                                                    <option selected value="2">Option 2 (Ausgewogen)</option>
+                                                    <option value="3">Option 3 (Langsamer, sehr genau)</option>
+                                                </select>
+                                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 dark:text-slate-400">
+                                                    <span class="material-symbols-outlined text-[24px]">expand_more</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex flex-col gap-3 pt-2 bg-slate-50 dark:bg-background-dark/50 p-6 rounded-[20px] border border-slate-100 dark:border-white/5 transition-colors">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-slate-800 dark:text-slate-200 text-[15px] font-semibold">Temperatur</p>
+                                                <div class="flex items-center gap-4 flex-1 mx-6">
+                                                    <input class="w-full" max="1" min="0" step="0.05" type="range" value="0.7"/>
+                                                </div>
+                                                <p class="text-fuchsia-600 dark:text-primary text-[15px] font-bold w-8 text-right bg-fuchsia-50 dark:bg-primary/10 px-2 py-1 rounded-lg transition-colors">0.7</p>
+                                            </div>
+                                            <p class="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed mt-2">Höhere Werte (z.B. 0.8) machen die Ausgabe zufälliger, niedrigere Werte (z.B. 0.2) fokussierter und deterministischer.</p>
+                                        </div>
+                                        
+                                        <div class="flex flex-col gap-5 mt-4">
+                                            <p class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold pb-2 border-b border-slate-100 dark:border-white/5">Vorlagen & Caching</p>
+                                            
+                                            <label class="flex items-center justify-between cursor-pointer pt-2">
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[14px] font-semibold">Tabellenstruktur-Caching</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Beschleunigt die Verarbeitung bei gleichartigen PDF-Strukturen.</span>
+                                                </div>
+                                                <div class="relative">
+                                                    <input checked class="sr-only peer" type="checkbox"/>
+                                                    <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                                </div>
+                                            </label>
+                                            
+                                            <label class="flex items-center justify-between cursor-pointer mt-1">
+                                                <div class="flex flex-col pr-4">
+                                                    <span class="text-slate-900 dark:text-slate-100 text-[14px] font-semibold">Text-Vorverarbeitung aktivieren</span>
+                                                    <span class="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">Bereinigt den extrahierten Text vor der KI-Analyse.</span>
+                                                </div>
+                                                <div class="relative">
+                                                    <input class="sr-only peer" type="checkbox"/>
+                                                    <div class="w-12 h-[26px] bg-slate-200 dark:bg-surface-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-200 dark:after:border-gray-500 after:border after:rounded-full after:h-[22px] after:w-[22px] after:transition-all after:shadow-sm peer-checked:bg-gradient-to-br peer-checked:from-[#d946ef] peer-checked:to-[#8b5cf6] dark:peer-checked:from-[#3b82f6] dark:peer-checked:via-[#e72bbb] dark:peer-checked:via-[35%] dark:peer-checked:to-[#e72bbb]"></div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-12 flex justify-start max-w-[800px] border-t border-slate-100 dark:border-white/5 pt-10 transition-colors">
+                                        <button class="save-generic-btn rounded-full h-12 px-8 bg-slate-900 dark:bg-gradient-primary text-white text-[15px] font-semibold shadow-md dark:shadow-sm hover:opacity-90 transition-colors">
+                                            Einstellungen speichern
+                                        </button>
+                                    </div>
+                                </section>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logout-modal" class="fixed inset-0 z-[10000] hidden flex items-center justify-center bg-slate-900/50 dark:bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div id="logout-modal-content" class="bg-surface-light dark:bg-surface-dark w-full max-w-sm rounded-[24px] p-8 shadow-2xl border border-surface-border-light dark:border-white/10 transform scale-90 modal-bounce text-center mx-4">
+            <div class="flex flex-col items-center gap-4">
+                <div class="size-16 rounded-full bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center mb-1 ring-4 ring-red-50/50 dark:ring-red-500/5">
+                    <span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">logout</span>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Abmelden?</h3>
+                <p class="text-slate-500 dark:text-slate-400 text-[14px] font-medium mb-4 leading-relaxed">
+                    Möchtest du die Sitzung wirklich beenden?<br>Ungespeicherte Änderungen gehen verloren.
+                </p>
+                <div class="flex gap-3 w-full">
+                    <button onclick="confirmLogout()" class="flex-1 flex items-center justify-center rounded-full h-12 bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors shadow-md shadow-red-500/20 active:scale-[0.98]">
+                        Abmelden
+                    </button>
+                    
+                    <button onclick="closeLogoutModal()" class="flex-1 flex items-center justify-center rounded-full h-12 bg-slate-100 dark:bg-surface-dark-alt border border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+                        Abbrechen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- THEME TOGGLE LOGIC (SYNCING BOTH TOGGLES) ---
+        const toggleLogin = document.getElementById('theme-toggle-login');
+        const toggleSettings = document.getElementById('theme-toggle-settings');
+        const htmlElement = document.documentElement;
+
+        function updateTheme(isDark) {
+            if (isDark) {
+                htmlElement.classList.add('dark');
+                if (toggleLogin) toggleLogin.checked = true;   // Geändert: true
+                if (toggleSettings) toggleSettings.checked = true; // Geändert: true
+            } else {
+                htmlElement.classList.remove('dark');
+                if (toggleLogin) toggleLogin.checked = false;  // Geändert: false
+                if (toggleSettings) toggleSettings.checked = false; // Geändert: false
+            }
+        }
+
+        // Initialize state based on HTML class
+        updateTheme(htmlElement.classList.contains('dark'));
+
+        // Listeners for both toggles
+        if (toggleLogin) {
+            toggleLogin.addEventListener('change', (e) => {
+                updateTheme(e.target.checked); // Das "!" wurde entfernt
+            });
+        }
+        if (toggleSettings) {
+            toggleSettings.addEventListener('change', (e) => {
+                updateTheme(e.target.checked); // Das "!" wurde entfernt
+            });
+        }
+
+        // --- SETTINGS OVERLAY LOGIC ---
+        const settingsModal = document.getElementById('settings-modal');
+        
+        function openSettings() {
+            settingsModal.classList.remove('hidden');
+            
+            // Trigger den Klick auf den UI-Tab automatisch beim Öffnen
+            const uiTabBtn = document.getElementById('btn-ui');
+            if (uiTabBtn) {
+                switchTab('section-ui', uiTabBtn);
+            }
+
+            setTimeout(() => {
+                settingsModal.classList.remove('opacity-0');
+                settingsModal.classList.add('opacity-100');
+            }, 10);
+        }
+
+        function closeSettings() {
+            settingsModal.classList.remove('opacity-100');
+            settingsModal.classList.add('opacity-0');
+            // Wait for transition to finish before hiding
+            setTimeout(() => {
+                settingsModal.classList.add('hidden');
+            }, 500); 
+        }
+
+        // --- LOGOUT MODAL LOGIC ---
+        const logoutModal = document.getElementById('logout-modal');
+        const logoutModalContent = document.getElementById('logout-modal-content');
+
+        function openLogoutModal() {
+            // Wir schließen die Settings NICHT mehr vorab!
+            
+            logoutModal.classList.remove('hidden');
+            // Force reflow for animation
+            void logoutModal.offsetWidth;
+            
+            logoutModal.classList.remove('opacity-0');
+            logoutModal.classList.add('opacity-100');
+            logoutModalContent.classList.remove('scale-90');
+            logoutModalContent.classList.add('scale-100');
+        }
+
+        function closeLogoutModal() {
+            logoutModal.classList.remove('opacity-100');
+            logoutModal.classList.add('opacity-0');
+            logoutModalContent.classList.remove('scale-100');
+            logoutModalContent.classList.add('scale-90');
+            
+            setTimeout(() => {
+                logoutModal.classList.add('hidden');
+                // Hier KEINE Weiterleitung zum Login-Screen einfügen!
+            }, 300);
+        }
+
+        function confirmLogout() {
+            closeLogoutModal();
+            
+            // Einstellungen erst jetzt schließen, da wirklich abgemeldet wird
+            if (!settingsModal.classList.contains('hidden')) {
+                closeSettings();
+            }
+            
+            // Wait slightly for modal to close, then execute logout logic
+            setTimeout(() => {
+                const authContainer = document.getElementById('auth-container');
+                const pdfAppContainer = document.getElementById('pdf-app-container');
+                const loginView = document.getElementById('login-view');
+                const welcomeView = document.getElementById('welcome-view');
+
+                // Verstecke die App
+                pdfAppContainer.classList.add('hidden');
+                pdfAppContainer.classList.remove('flex', 'animate-fade-in-up');
+                pdfAppContainer.classList.add('opacity-0');
+
+                // Zeige das Auth Container wieder
+                authContainer.classList.remove('hidden', 'animate-fade-out-up');
+                authContainer.classList.add('flex', 'animate-fade-in-up');
+                
+                welcomeView.classList.add('hidden');
+                welcomeView.classList.remove('flex');
+                
+                loginView.classList.remove('hidden');
+                loginView.classList.add('flex');
+
+                // Leere alle Uploads und resette zurück auf Seite 1
+                selectedFiles = [];
+                renderFiles();
+                
+                document.getElementById('page1').classList.remove('hidden');
+                document.getElementById('page1').classList.add('flex');
+                document.getElementById('page2').classList.add('hidden');
+                document.getElementById('page2').classList.remove('flex');
+                document.getElementById('page3').classList.add('hidden');
+                document.getElementById('page3').classList.remove('flex');
+                document.getElementById('page4').classList.add('hidden');
+                document.getElementById('page4').classList.remove('flex');
+            }, 300);
+        }
+
+        // --- SETTINGS TABS & LOGIC ---
+        function switchTab(sectionId, element) {
+            const sections = document.querySelectorAll('.settings-section');
+            sections.forEach(sec => {
+                sec.classList.remove('block');
+                sec.classList.add('hidden');
+            });
+
+            const target = document.getElementById(sectionId);
+            if(target) {
+                target.classList.remove('hidden');
+                target.classList.add('block');
+            }
+
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.classList.remove('bg-fuchsia-50/50', 'text-fuchsia-600', 'border-fuchsia-100/50', 'shadow-sm', 'dark:bg-primary/10', 'dark:text-primary');
+                link.classList.add('text-slate-600', 'dark:text-slate-300', 'hover:bg-slate-50', 'dark:hover:bg-white/5', 'border-transparent');
+                
+                const textSpan = link.querySelector('span:not(.material-symbols-outlined)');
+                if(textSpan) {
+                    textSpan.classList.remove('text-gradient', 'font-semibold', 'dark:text-gradient');
+                    textSpan.classList.add('font-medium');
+                }
+
+                const icon = link.querySelector('.material-symbols-outlined');
+                if(icon) {
+                    icon.style.fontVariationSettings = "'FILL' 0";
+                    icon.classList.remove('text-gradient', 'dark:text-gradient');
+                }
+            });
+
+            element.classList.remove('text-slate-600', 'dark:text-slate-300', 'hover:bg-slate-50', 'dark:hover:bg-white/5', 'border-transparent');
+            element.classList.add('bg-fuchsia-50/50', 'text-fuchsia-600', 'border-fuchsia-100/50', 'shadow-sm', 'dark:bg-primary/10', 'dark:text-primary');
+            
+            const activeText = element.querySelector('span:not(.material-symbols-outlined)');
+            if(activeText) {
+                activeText.classList.remove('font-medium');
+                activeText.classList.add('text-gradient', 'font-semibold');
+            }
+
+            const activeIcon = element.querySelector('.material-symbols-outlined');
+            if(activeIcon) {
+                activeIcon.style.fontVariationSettings = "'FILL' 1";
+                activeIcon.classList.add('text-gradient');
+            }
+        }
+
+        document.querySelectorAll('.save-generic-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.id === 'save-btn') return; 
+                
+                const originalText = "Einstellungen speichern";
+                this.innerText = "Gespeichert!";
+                
+                setTimeout(() => { 
+                    this.innerText = originalText; 
+                }, 2000);
+            });
+        });
+
+        const saveBtn = document.getElementById('save-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                const inputName = document.getElementById('input-name').value;
+                const inputEmail = document.getElementById('input-email').value;
+                const displayName = document.getElementById('display-name');
+                const displayEmail = document.getElementById('display-email');
+                
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const originalText = "Einstellungen speichern";
+                
+                if (emailRegex.test(inputEmail) && inputName) {
+                    displayName.textContent = inputName + "!";
+                    displayEmail.textContent = inputEmail;
+                    this.innerText = "Gespeichert!";
+                } else {
+                    this.innerText = "E-Mail ungültig";
+                }
+                
+                setTimeout(() => { 
+                    this.innerText = originalText; 
+                }, 2000);
+            });
+        }
+
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                if(this.parentElement && this.parentElement.nextElementSibling) {
+                    this.parentElement.nextElementSibling.textContent = this.value;
+                }
+            });
+        });
+
+        const avatarToggle = document.getElementById('avatar-toggle');
+        const userAvatarSettings = document.getElementById('user-avatar-settings');
+        const femaleAvatarUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuCffiwaB3WwRA71V3PLQX3bmkvGtZgaA-NJAxzsTRs-PGSBBUr1rsCCrU--9-69zQSC44N3EPEwTFqMcioSXf0c-i0Al3ggIAerdAuprYT12jGhfmtvaCL5pZFgOTx_5f7MptM42heEFwLJGV7O1ynIN_54kW8XZZk6uXU0OnriE4j4Su8THzEwybtdwu2OvgeY5QPBe4KlqfADmqtvV-LPUBpt8hrrTLtMPgq3gML9kqMq5wy7Am6N0KaBPEe5rjQ5DrTRi-bmNU9Y";
+        const maleAvatarUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuA4K7qzMnZV61gpRNPNfmJU5q_z-nJEEDpa_gGiTKQz5ZxzkEiuooXN36MmLkU3qrj4SzLLoMzEGFixPLCuw6CkNzV3Y026BZ3Yd-Ho552THMch7MxfuvvSGt2xOrgICqChWj2DI8DLV1pXLa1hkbf12DZqfMumW9zt0GJlb5adEEh0P2BKAcQF343hP6KNXX1vVyHztwnEdaIGMeO_UjX6AcXlk91FpUPh0IXiNKzFDpuYl5hjyLpTKiQfkYdMiC9J6ItcEHy4jW-y";
+
+        if(avatarToggle && userAvatarSettings) {
+            avatarToggle.addEventListener('change', function() {
+                if(this.checked) {
+                    userAvatarSettings.style.backgroundImage = `url('${maleAvatarUrl}')`;
+                } else {
+                    userAvatarSettings.style.backgroundImage = `url('${femaleAvatarUrl}')`;
+                }
+            });
+        }
+
+        function triggerLogin() {
+            // Hide Login Form, Show Welcome Back animation
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('welcome-view').classList.remove('hidden');
+            document.getElementById('welcome-view').classList.add('flex');
+
+            // Wait 2000ms, then start the smooth transition
+            setTimeout(() => {
+                const authContainer = document.getElementById('auth-container');
+                const pdfAppContainer = document.getElementById('pdf-app-container');
+                
+                // 1. Fade out the auth container upwards
+                authContainer.classList.remove('animate-fade-in-up');
+                authContainer.classList.add('animate-fade-out-up');
+                
+                // 2. After fade-out completes (500ms), hide it and fade in the PDF tool
+                setTimeout(() => {
+                    authContainer.classList.add('hidden');
+                    
+                    pdfAppContainer.classList.remove('hidden');
+                    pdfAppContainer.classList.add('flex');
+                    
+                    // Add fade-in-up class so it glides smoothly into view
+                    pdfAppContainer.classList.add('animate-fade-in-up');
+                    pdfAppContainer.classList.add('opacity-100');
+                    pdfAppContainer.classList.remove('opacity-0');
+                }, 500); 
+                
+            }, 2000);
+        }
+
+        // --- PDF CONVERTER APP ---
+        const fileInput = document.getElementById('fileInput');
+        const excelInput = document.getElementById('excelInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const addMoreBtn = document.getElementById('addMoreBtn');
+        const addExcelBtn = document.getElementById('addExcelBtn');
+        const backBtn = document.getElementById('backBtn');
+        const deleteAllBtn = document.getElementById('deleteAllBtn');
+        const startProcessBtn = document.getElementById('startProcessBtn');
+        const cancelProcessBtn = document.getElementById('cancelProcessBtn');
+        
+        const page1 = document.getElementById('page1');
+        const page2 = document.getElementById('page2');
+        const page3 = document.getElementById('page3');
+        const page4 = document.getElementById('page4');
+        
+        const fileList = document.getElementById('fileList');
+        const fileCount = document.getElementById('fileCount');
+        const directoryInput = document.getElementById('directoryInput');
+        const pathDisplay = document.querySelector('#section-storage p.font-mono');
+        const selectDirBtn = document.querySelector('#section-storage button'); // Der "Speicherort auswählen" Button
+
+        if (selectDirBtn && directoryInput) {
+            selectDirBtn.addEventListener('click', () => directoryInput.click());
+
+            directoryInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    // Extrahiert den relativen Pfad des ersten Elements
+                    const filePath = e.target.files[0].webkitRelativePath;
+                    const folderName = filePath.split('/')[0];
+                    // Update der Anzeige (simuliert den Pfad)
+                    pathDisplay.textContent = `C:\\Users\\User\\Downloads\\${folderName}`;
+                }
+            });
+        }
+        const dropZone = document.getElementById('dropZone');
+        const processingFileNames = document.getElementById('processingFileNames');
+        const currentProcessingText = document.getElementById('currentProcessingText');
+        const progressText = document.getElementById('progressText');
+        const progressBar = document.getElementById('progressBar');
+        const progressPing = document.getElementById('progressPing');
+        const terminalContainer = document.getElementById('terminalContainer');
+        
+        const finalFileName = document.getElementById('finalFileName');
+        const finalFileSize = document.getElementById('finalFileSize');
+        const startOverBtn = document.getElementById('startOverBtn');
+
+        let selectedFiles = [];
+        let processTimer; 
+        let logInterval; 
+
+        function handleFiles(files) {
+            const filesArray = Array.from(files);
+            const pdfFiles = filesArray.filter(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+
+            if (pdfFiles.length > 0) {
+                selectedFiles = [...selectedFiles, ...pdfFiles];
+                page1.classList.add('hidden');
+                page2.classList.remove('hidden');
+                page2.classList.add('flex');
+                renderFiles();
+            } else if (filesArray.length > 0) {
+                alert("Bitte nur PDF-Dateien hochladen.");
+            }
+        }
+
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        addMoreBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (event) => { handleFiles(event.target.files); fileInput.value = ''; });
+
+        addExcelBtn.addEventListener('click', () => excelInput.click());
+        excelInput.addEventListener('change', (event) => {
+            const filesArray = Array.from(event.target.files);
+            const excelFiles = filesArray.filter(file => file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx'));
+            if (excelFiles.length > 0) { selectedFiles = [...selectedFiles, ...excelFiles]; renderFiles(); }
+            excelInput.value = '';
+        });
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, preventDefaults, false));
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('border-primary', 'bg-primary/10', 'dark:bg-primary/20');
+            dropZone.classList.remove('border-primary/20', 'dark:border-primary/40');
+        }, false));
+        ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('border-primary', 'bg-primary/10', 'dark:bg-primary/20');
+            dropZone.classList.add('border-primary/20', 'dark:border-primary/40');
+        }, false));
+        dropZone.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files), false);
+
+        backBtn.addEventListener('click', () => { page2.classList.add('hidden'); page2.classList.remove('flex'); page1.classList.remove('hidden'); });
+        deleteAllBtn.addEventListener('click', () => { selectedFiles = []; renderFiles(); backBtn.click(); });
+        function removeFile(index) { selectedFiles.splice(index, 1); renderFiles(); if (selectedFiles.length === 0) backBtn.click(); }
+
+        function renderFiles() {
+            fileCount.textContent = `${selectedFiles.length} ${selectedFiles.length === 1 ? 'Datei' : 'Dateien'} geladen`;
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const sizeInKB = (file.size / 1024);
+                const sizeText = sizeInKB > 1024 ? (sizeInKB / 1024).toFixed(2) + ' MB' : sizeInKB.toFixed(0) + ' KB';
+                const isExcel = file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx');
+                const iconName = isExcel ? 'table_view' : 'picture_as_pdf';
+                const iconColors = isExcel ? 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'text-primary bg-primary/10 dark:bg-primary/20';
+
+                const fileHTML = `
+                    <div class="flex items-center gap-4 px-6 py-5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                        <div class="flex items-center gap-4 flex-1 min-w-0">
+                            <div class="${iconColors} flex items-center justify-center rounded-[12px] shrink-0 size-12 transition-colors">
+                                <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">${iconName}</span>
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <p class="text-slate-900 dark:text-slate-100 text-[15px] font-semibold leading-normal truncate">${file.name}</p>
+                                <p class="text-slate-500 dark:text-slate-400 text-[13px] font-medium">${sizeText}</p>
+                            </div>
+                        </div>
+                        <div class="shrink-0">
+                            <button onclick="removeFile(${index})" class="flex items-center justify-center size-8 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 hover:text-red-500 transition-all">
+                                <span class="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                        </div>
+                    </div>`;
+                fileList.insertAdjacentHTML('beforeend', fileHTML);
+            });
+        }
+
+        startProcessBtn.addEventListener('click', () => {
+            const pdfsToProcess = selectedFiles.filter(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+            if (pdfsToProcess.length === 0) { alert("Bitte füge mindestens ein PDF hinzu."); return; }
+
+            // --- NEUE LOGIK FÜR DIE ANZEIGE DER DATEINAMEN ---
+            let displayNames = "";
+            if (pdfsToProcess.length <= 3) {
+                // Wenn 3 oder weniger Dateien: Alle anzeigen
+                displayNames = pdfsToProcess.map(file => file.name).join(', ');
+            } else {
+                // Wenn mehr als 3 Dateien: Nur die ersten 3 nehmen und "..." anhängen
+                displayNames = pdfsToProcess.slice(0, 3).map(file => file.name).join(', ') + ' ...';
+            }
+            
+            processingFileNames.textContent = displayNames;
+            // ------------------------------------------------
+
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+            currentProcessingText.textContent = 'Bereite Verarbeitung vor...';
+            progressPing.classList.remove('hidden');
+
+            page2.classList.add('hidden');
+            page2.classList.remove('flex');
+            page3.classList.remove('hidden');
+            page3.classList.add('flex');
+
+            simulateBackendProcessing(pdfsToProcess);
+        });
+
+        cancelProcessBtn.addEventListener('click', () => {
+            if (processTimer) clearTimeout(processTimer); 
+            if (logInterval) clearInterval(logInterval); 
+            page3.classList.add('hidden');
+            page3.classList.remove('flex');
+            page2.classList.remove('hidden');
+            page2.classList.add('flex');
+        });
+
+        startOverBtn.addEventListener('click', () => {
+            selectedFiles = []; 
+            renderFiles();
+            
+            page4.classList.add('hidden');
+            page4.classList.remove('flex');
+            page1.classList.remove('hidden');
+            page1.classList.add('flex');
+        });
+
+        const logStates = [
+            {
+                wrapper: "terminal-log relative z-30 opacity-100 scale-100 translate-y-0 log-transition",
+                inner: "relative bg-surface-light dark:bg-surface-dark-alt border border-primary/20 dark:border-primary/40 rounded-[24px] p-5 shadow-soft dark:shadow-none overflow-hidden",
+                hasGlow: true,
+                iconClass: "bg-primary/10 dark:bg-primary/20 border-primary/20 dark:border-primary/40 text-primary",
+                icon: "memory"
+            },
+            {
+                wrapper: "terminal-log relative z-20 opacity-90 scale-[0.985] translate-y-[26px] log-transition",
+                inner: "relative bg-background-light/80 dark:bg-surface-dark/80 border border-slate-200 dark:border-surface-border-dark rounded-[24px] p-4 pt-8 shadow-sm backdrop-blur-sm overflow-hidden",
+                hasGlow: false,
+                iconClass: "bg-white dark:bg-surface-border-dark border-slate-200 dark:border-surface-border-dark text-slate-500 dark:text-slate-400",
+                icon: "sync"
+            },
+            {
+                wrapper: "terminal-log relative z-10 opacity-70 scale-[0.96] translate-y-[48px] log-transition",
+                inner: "relative bg-slate-100/50 dark:bg-background-dark border border-slate-200 dark:border-surface-border-dark rounded-[24px] p-4 pt-8 shadow-sm overflow-hidden",
+                hasGlow: false,
+                iconClass: "bg-white dark:bg-surface-border-dark border-slate-200 dark:border-surface-border-dark text-slate-500 dark:text-slate-400",
+                icon: "cloud_sync"
+            }
+        ];
+
+        function addTerminalLog(message) {
+            const newLog = document.createElement('div');
+            newLog.className = "terminal-log relative z-0 opacity-0 scale-[0.98] -translate-y-3 log-transition";
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            newLog.innerHTML = `
+                <div class="glow-bg absolute inset-0 bg-gradient-to-r from-primary to-blue-500 rounded-[24px] blur opacity-20 dark:opacity-40 pointer-events-none"></div>
+                <div class="inner-box relative bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark rounded-[24px] p-5 shadow-soft dark:shadow-none overflow-hidden transition-all duration-500">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-primary"></div>
+                    <div class="flex items-start gap-4">
+                        <div class="relative shrink-0 hidden sm:block">
+                            <div class="icon-box size-12 rounded-[14px] bg-primary/10 flex items-center justify-center border border-primary/20 transition-all duration-500 text-primary">
+                                <span class="material-symbols-outlined text-[24px] icon-span" style="font-variation-settings: 'FILL' 1;">memory</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-1">
+                                <h3 class="text-[15px] font-bold text-slate-900 dark:text-slate-100 tracking-tight">Systemprozess</h3>
+                                <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-surface-border-dark px-2 py-1 rounded-md whitespace-nowrap">${timeString}</span>
+                            </div>
+                            <p class="text-slate-600 dark:text-slate-400 text-[14px] leading-relaxed truncate-multiline font-medium">${message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            terminalContainer.prepend(newLog);
+
+            const logs = Array.from(terminalContainer.children);
+
+            // Alles ab dem 4. Log sofort entfernen, bevor die neue Animation beginnt
+            logs.forEach((log, index) => {
+                log.style.pointerEvents = 'none';
+
+                if (index > 2) {
+                    log.remove();
+                }
+            });
+
+            // Nach dem sofortigen Entfernen die aktuelle Log-Liste neu holen
+            const visibleLogs = Array.from(terminalContainer.children);
+
+            // Reflow erzwingen, damit die Animation sauber von der neuen Ausgangslage startet
+            void terminalContainer.offsetHeight;
+
+            visibleLogs.forEach((log, index) => {
+                const state = logStates[index];
+                log.className = state.wrapper;
+                
+                const innerBox = log.querySelector('.inner-box');
+                if (innerBox) innerBox.className = `inner-box ${state.inner}`;
+                
+                const glowBg = log.querySelector('.glow-bg');
+                if (glowBg) glowBg.style.display = state.hasGlow ? 'block' : 'none';
+
+                const iconBox = log.querySelector('.icon-box');
+                if (iconBox) {
+                    iconBox.className = `icon-box size-12 rounded-[14px] flex items-center justify-center border transition-all duration-500 ${state.iconClass}`;
+                }
+
+                const iconSpan = log.querySelector('.icon-span');
+                if (iconSpan) {
+                    iconSpan.textContent = state.icon;
+                    iconSpan.className =
+                        index === 0
+                            ? "material-symbols-outlined text-[24px] icon-span text-primary"
+                            : "material-symbols-outlined text-[24px] icon-span text-slate-400 dark:text-slate-500";
+                }
+            });
+        }
+
+        function simulateBackendProcessing(pdfFiles) {
+            const totalPdfs = pdfFiles.length;
+            let processedCount = 0;
+
+            if (processTimer) clearTimeout(processTimer);
+            if (logInterval) clearInterval(logInterval);
+
+            const dummyLogs = [
+                "Lese PDF Metadaten & Layoutstruktur...",
+                "Initialisiere OCR auf Vektor-Ebene...",
+                "Suche nach Tabellenlinien und Begrenzungen...",
+                "Fand Tabelle ID #402, extrahiere Zellen...",
+                "Lese Tabellenköpfe und formatiere Spalten aus...",
+                "Bereinige Artefakte und konvertiere Datentypen...",
+                "Richte Zeilenabstände und Padding ein...",
+                "Füge validierte Daten zur Excel-Arbeitsmappe hinzu..."
+            ];
+
+            terminalContainer.innerHTML = '';
+            addTerminalLog("Verbindung zum Server hergestellt. Initialisiere Pipeline...");
+
+            logInterval = setInterval(() => {
+                const randomLog = dummyLogs[Math.floor(Math.random() * dummyLogs.length)];
+                addTerminalLog(randomLog);
+            }, 1800);
+
+            function processNextPdf() {
+                if (processedCount < totalPdfs) {
+                    const currentPdf = pdfFiles[processedCount];
+                    currentProcessingText.textContent = `Verarbeite ${currentPdf.name}...`;
+
+                    processTimer = setTimeout(() => {
+                        processedCount++;
+                        const percentage = (processedCount / totalPdfs) * 100;
+                        
+                        progressBar.style.width = `${percentage}%`;
+                        progressText.textContent = `${Math.round(percentage)}%`;
+
+                        if (processedCount < totalPdfs) {
+                            processNextPdf();
+                        } else {
+                            // FERTIG
+                            clearInterval(logInterval);
+                            addTerminalLog("Verarbeitung zu 100% erfolgreich abgeschlossen.");
+                            currentProcessingText.textContent = "Verarbeitung erfolgreich abgeschlossen!";
+                            progressPing.classList.add('hidden'); 
+
+                            setTimeout(() => {
+                                let outName = "Konvertierte_Dateien";
+                                if (pdfFiles.length === 1) {
+                                    outName = pdfFiles[0].name.replace(/\.[^/.]+$/, ""); 
+                                }
+                                finalFileName.value = outName;
+
+                                const totalBytes = pdfFiles.reduce((acc, file) => acc + file.size, 0);
+                                const sizeInKB = totalBytes / 1024;
+                                finalFileSize.textContent = sizeInKB > 1024 ? (sizeInKB / 1024).toFixed(2) + ' MB' : sizeInKB.toFixed(0) + ' KB';
+
+                                page3.classList.add('hidden');
+                                page3.classList.remove('flex');
+                                page4.classList.remove('hidden');
+                                page4.classList.add('flex');
+                            }, 2000); 
+                        }
+                    }, 3500);
+                }
+            }
+
+            processTimer = setTimeout(processNextPdf, 800);
+        }
+    </script>
+</body>
+</html>
